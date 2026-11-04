@@ -23,7 +23,9 @@ logger = logging.getLogger("scripts.embed")
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--batch-size", type=int, default=32)
-    parser.add_argument("--device", default="auto", help="auto | cpu | cuda")
+    parser.add_argument(
+        "--device", default="auto", help="auto (cuda > mps > cpu) | cpu | cuda | mps"
+    )
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args(argv)
 

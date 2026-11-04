@@ -80,17 +80,32 @@ class Embedder(Protocol):
     def zero_shot_scale_bias(self) -> tuple[float, float]: ...
 
 
+def pick_device(torch_module: Any, requested: str = "auto") -> str:
+    """auto: CUDA, then Apple GPU (MPS), then CPU."""
+    if requested != "auto":
+        return requested
+    if torch_module.cuda.is_available():
+        return "cuda"
+    mps = getattr(torch_module.backends, "mps", None)
+    if mps is not None and mps.is_available():
+        return "mps"
+    return "cpu"
+
+
 class SigLipEmbedder:
     """transformers SigLIP wrapper (L2-normalised embeddings)."""
 
     def __init__(self, model_name: str, revision: str | None = None, device: str = "auto") -> None:
+        import os
+
+        # Let ops without an MPS kernel fall back to the CPU instead of crashing (Apple GPU).
+        os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
         import torch
         from transformers import AutoModel, AutoProcessor
 
         self._torch = torch
-        self.device = (
-            ("cuda" if torch.cuda.is_available() else "cpu") if device == "auto" else device
-        )
+        self.device = pick_device(torch, device)
+        logger.info("SigLIP running on device: %s", self.device)
         # trust_remote_code is never enabled: only weights + config are loaded.
         self.model = (
             AutoModel.from_pretrained(model_name, revision=revision, trust_remote_code=False)

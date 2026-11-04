@@ -145,3 +145,21 @@ def test_training_samples_use_finals_and_optionally_open(
     assert base == {final_img.sha256}
     wide = {s.sha256 for s in inf.training_samples(session, scheme, include_unfinalized=True)}
     assert wide == {final_img.sha256, single_img.sha256}  # disagreeing image excluded
+
+
+def test_pick_device_prefers_cuda_then_mps_then_cpu() -> None:
+    from types import SimpleNamespace
+
+    def fake(cuda: bool, mps: bool | None) -> SimpleNamespace:
+        backends = (
+            SimpleNamespace()
+            if mps is None
+            else SimpleNamespace(mps=SimpleNamespace(is_available=lambda: mps))
+        )
+        return SimpleNamespace(cuda=SimpleNamespace(is_available=lambda: cuda), backends=backends)
+
+    assert inf.pick_device(fake(True, True)) == "cuda"
+    assert inf.pick_device(fake(False, True)) == "mps"
+    assert inf.pick_device(fake(False, False)) == "cpu"
+    assert inf.pick_device(fake(False, None)) == "cpu"
+    assert inf.pick_device(fake(True, True), "cpu") == "cpu"
