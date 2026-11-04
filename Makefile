@@ -1,5 +1,8 @@
 .PHONY: dev-up dev-down dev-logs dev-demo dev-ingest dev-embed dev-train dev-export install dev migrate ingest embed train zeroshot import-library export materialize test lint typecheck audit check
 
+# ML steps need the optional extras; `uv run --extra` installs them on demand.
+ML = uv run --extra probe --extra siglip
+
 install:
 	uv sync --extra probe --extra siglip
 
@@ -14,13 +17,13 @@ ingest: migrate
 	uv run python -m scripts.ingest
 
 embed: migrate
-	uv run python -m scripts.embed
+	$(ML) python -m scripts.embed
 
 train: migrate
-	uv run python -m scripts.train_probe
+	$(ML) python -m scripts.train_probe
 
 zeroshot: migrate
-	uv run python -m scripts.train_probe --zero-shot
+	$(ML) python -m scripts.train_probe --zero-shot
 
 # e.g. make import-library DATASET=places365 ROOT=./library_data ARGS="--download"
 import-library: migrate
