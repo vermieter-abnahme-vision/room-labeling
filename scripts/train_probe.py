@@ -66,9 +66,10 @@ def main(argv: list[str] | None = None) -> int:
                 if usable
                 else np.empty((0, matrix.shape[1]), np.float32),
                 [x.label for x in usable],
-                [x.group_id for x in usable],
+                [x.sha256 if x.is_library else x.group_id for x in usable],
                 s.models_dir,
                 c=args.c,
+                eval_mask=[not x.is_library for x in usable],
             )
         except inference.NotEnoughDataError as exc:
             logger.warning("probe not trainable (%s) -> zero-shot fallback", exc)
@@ -77,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
             version, classes = result.version, result.classes
             probs = clf.predict_proba(matrix).astype(np.float32)
             logger.info(
-                "probe %s: %d samples, group-CV accuracy=%s, saved to %s",
+                "probe %s: %d samples, group-CV accuracy (real data only)=%s, saved to %s",
                 version,
                 result.n_samples,
                 f"{result.cv_accuracy:.3f}" if result.cv_accuracy is not None else "n/a",

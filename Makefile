@@ -1,4 +1,4 @@
-.PHONY: dev-up dev-down dev-logs dev-demo dev-ingest dev-embed dev-train dev-export install dev migrate ingest embed train zeroshot import-library export materialize test lint typecheck audit check
+.PHONY: evaluate dev-up dev-down dev-logs dev-demo dev-ingest dev-embed dev-train dev-export install dev migrate ingest embed train zeroshot import-library export materialize test lint typecheck audit check
 
 # ML steps need the optional extras; `uv run --extra` installs them on demand.
 ML = uv run --extra probe --extra siglip
@@ -35,6 +35,10 @@ export: migrate
 # e.g. make materialize MANIFEST=var/exports/<stamp>/manifest.jsonl
 materialize: migrate
 	uv run python -m scripts.materialize_imagefolder $(MANIFEST) $(ARGS)
+
+# e.g. make evaluate MANIFEST=var/exports/<stamp>/manifest.jsonl ARGS=--zero-shot
+evaluate:
+	$(ML) python -m scripts.evaluate $(MANIFEST) $(ARGS)
 
 test:
 	uv run pytest --cov=app --cov-report=term-missing

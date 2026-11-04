@@ -29,6 +29,7 @@ from app.models import (
     Consensus,
     ConsensusStatus,
     Image,
+    ImageSource,
     Labeler,
     ModelPrediction,
 )
@@ -38,6 +39,7 @@ logger = logging.getLogger(__name__)
 Array = NDArray[np.float32]
 MIN_SAMPLES_PER_CLASS = 3
 MIN_CLASSES = 2
+MIN_EVAL_SAMPLES = 10
 _SAFE_TAG = re.compile(r"[^A-Za-z0-9._-]+")
 
 
@@ -203,6 +205,7 @@ class LabeledSample:
     sha256: str
     group_id: str
     label: str
+    is_library: bool = False
 
 
 def training_samples(
@@ -220,7 +223,12 @@ def training_samples(
         )
     ):
         if cons.final_label in scheme.labels:
-            samples[image.id] = LabeledSample(image.sha256, image.group_id, cons.final_label)
+            samples[image.id] = LabeledSample(
+                image.sha256,
+                image.group_id,
+                cons.final_label,
+                image.source is ImageSource.LIBRARY,
+            )
     if include_unfinalized:
         votes: dict[int, list[str]] = {}
         rows = session.execute(
@@ -273,12 +281,17 @@ def train_probe(
     x: Array,
     labels: Sequence[str],
     groups: Sequence[str],
-    models_dir: Path,
+    models_dir: Path | None,
     *,
     version: str | None = None,
     c: float = 1.0,
+    eval_mask: Sequence[bool] | None = None,
 ) -> tuple[LogisticRegression, ProbeResult]:
-    """Fit class-balanced logistic regression; report group-aware CV accuracy (no leakage)."""
+    """Fit class-balanced logistic regression; report group-aware CV accuracy (no leakage).
+
+    ``eval_mask`` selects the samples whose cross-validated predictions are scored (e.g. real
+    apartment data only). ``models_dir=None`` skips saving the model.
+    """
     classes = sorted(set(labels))
     counts = {k: list(labels).count(k) for k in classes}
     usable = [k for k in classes if counts[k] >= MIN_SAMPLES_PER_CLASS]
@@ -289,6 +302,7 @@ def train_probe(
     mask = np.array([lab in usable for lab in labels])
     xs, ys = x[mask], np.array(labels)[mask]
     gs = np.array(groups)[mask]
+    scored = np.array(eval_mask)[mask] if eval_mask is not None else np.ones(len(ys), bool)
 
     clf = LogisticRegression(C=c, max_iter=2000, class_weight="balanced")
     cv_accuracy: float | None = None
@@ -297,15 +311,20 @@ def train_probe(
         splitter = GroupKFold(n_splits=min(5, n_groups))
         try:
             pred = cross_val_predict(clf, xs, ys, groups=gs, cv=splitter)
-            cv_accuracy = float(np.mean(pred == ys))
+            if int(scored.sum()) >= MIN_EVAL_SAMPLES:
+                cv_accuracy = float(np.mean((pred == ys)[scored]))
         except ValueError:
             logger.warning("cross-validation skipped (a training fold lacked classes)")
     clf.fit(xs, ys)
 
     version = version or new_model_version()
-    models_dir.mkdir(parents=True, exist_ok=True)
-    model_path = models_dir / f"{version}.joblib"
-    joblib.dump({"classifier": clf, "classes": list(clf.classes_), "version": version}, model_path)
+    model_path = Path("(not saved)")
+    if models_dir is not None:
+        models_dir.mkdir(parents=True, exist_ok=True)
+        model_path = models_dir / f"{version}.joblib"
+        joblib.dump(
+            {"classifier": clf, "classes": list(clf.classes_), "version": version}, model_path
+        )
     return clf, ProbeResult(version, list(clf.classes_), int(mask.sum()), cv_accuracy, model_path)
 
 
