@@ -112,7 +112,7 @@ class SigLipEmbedder:
         inputs = self.processor(images=images, return_tensors="pt").to(self.device)
         with self._torch.no_grad():
             feats = self.model.get_image_features(**inputs)
-        return _normalize(feats.cpu().numpy())
+        return _normalize(_as_tensor(feats).cpu().numpy())
 
     def embed_texts(self, texts: Sequence[str]) -> Array:
         inputs = self.processor(
@@ -120,13 +120,18 @@ class SigLipEmbedder:
         ).to(self.device)
         with self._torch.no_grad():
             feats = self.model.get_text_features(**inputs)
-        return _normalize(feats.cpu().numpy())
+        return _normalize(_as_tensor(feats).cpu().numpy())
 
     def zero_shot_scale_bias(self) -> tuple[float, float]:
         return (
             float(self.model.logit_scale.exp().item()),
             float(self.model.logit_bias.item()),
         )
+
+
+def _as_tensor(output: Any) -> Any:
+    """transformers >= 5 returns a ModelOutput (pooler_output) instead of a bare tensor."""
+    return output if hasattr(output, "cpu") else output.pooler_output
 
 
 def _normalize(matrix: Any) -> Array:
