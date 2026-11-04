@@ -1,4 +1,4 @@
-.PHONY: install dev migrate ingest embed train zeroshot import-library export materialize test lint typecheck audit check
+.PHONY: dev-up dev-down dev-logs dev-demo dev-ingest dev-embed dev-train dev-export install dev migrate ingest embed train zeroshot import-library export materialize test lint typecheck audit check
 
 install:
 	uv sync --extra probe --extra siglip
@@ -49,3 +49,31 @@ audit:
 	uv run pip-audit -r /tmp/rl-requirements.txt --no-deps --disable-pip
 
 check: lint typecheck test
+
+# --- Local end-to-end stack (docker-compose.dev.yml: app + Dex OIDC) -------------------------
+DEV = docker compose -f docker-compose.dev.yml
+
+dev-up:
+	$(DEV) up -d --build
+	@echo "App: http://localhost:8000  (login: alice@example.test / password, admin@example.test is admin)"
+
+dev-down:
+	$(DEV) down -v
+
+dev-logs:
+	$(DEV) logs -f
+
+dev-demo:
+	uv run python -m scripts.demo_data
+
+dev-ingest:
+	$(DEV) run --rm app python -m scripts.ingest
+
+dev-embed:
+	$(DEV) run --rm app python -m scripts.embed
+
+dev-train:
+	$(DEV) run --rm app python -m scripts.train_probe
+
+dev-export:
+	$(DEV) run --rm app python -m scripts.export

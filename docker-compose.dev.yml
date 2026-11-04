@@ -1,0 +1,81 @@
+# Local end-to-end stack: app (hot reload) + Dex as OIDC provider. DEV ONLY – never expose it.
+#
+#   make dev-up        # build + start   -> http://localhost:8000
+#   make dev-demo      # synthetic demo images/video into ./images_in, ./videos_in
+#   make dev-ingest    # ingest them into the dev DB
+#   open http://localhost:8000  -> log in as alice@example.test / password
+#   (admin@example.test is admin; alice, bob, carol are labelers. Use private windows
+#    to label as several users and see needs_more / conflict / agreement.)
+#
+# Embeddings/training need torch: DEV_EXTRAS="--extra probe --extra siglip" make dev-up
+# Reset everything: make dev-down   (removes the dev volumes)
+
+name: room-labeling-dev
+
+services:
+  dex:
+    image: ghcr.io/dexidp/dex:v2.46.1
+    command: ["dex", "serve", "/etc/dex/config.yaml"]
+    volumes:
+      - ./dev/dex.yaml:/etc/dex/config.yaml:ro
+    ports:
+      - "127.0.0.1:5556:5556"
+    networks:
+      default:
+        aliases: [dex.localhost]
+
+  app:
+    build:
+      context: .
+      args:
+        EXTRAS: ${DEV_EXTRAS---extra probe}
+    image: room-labeling:dev
+    depends_on: [dex]
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      ENVIRONMENT: dev              # enables /docs and allows the http:// dev issuer
+      # Dev-only values – clearly not secrets
+      SECRET_KEY: dev-only-session-key-not-a-secret-0123456789
+      COOKIE_SECURE: "false"
+      HSTS_ENABLED: "false"
+      ALLOWED_HOSTS: localhost,127.0.0.1
+      OIDC_ISSUER: http://dex.localhost:5556/dex
+      OIDC_CLIENT_ID: room-labeling-dev
+      OIDC_CLIENT_SECRET: dev-client-secret
+      OIDC_REDIRECT_URI: http://localhost:8000/auth/callback
+      ADMIN_EMAILS: admin@example.test
+      EXPORT_SALT: dev-export-salt
+      DATABASE_URL: sqlite:////data/db/labeling.db
+      IMAGES_DIR: /data/images
+      EMBED_CACHE_DIR: /data/embed_cache
+      MODELS_DIR: /data/models
+      EXPORT_DIR: /data/exports
+      IMAGES_IN_DIR: /inputs/images_in
+      VIDEOS_IN_DIR: /inputs/videos_in
+      HF_HOME: /data/hf
+    command:
+      [
+        "uvicorn", "app.main:run_factory", "--factory",
+        "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/app",
+      ]
+    volumes:
+      - ./app:/app/app:ro           # hot reload for code, templates and static files
+      - dev-images:/data/images
+      - dev-db:/data/db
+      - dev-embed-cache:/data/embed_cache
+      - dev-models:/data/models
+      - dev-exports:/data/exports
+      - dev-hf-cache:/data/hf
+      - ./images_in:/inputs/images_in:ro
+      - ./videos_in:/inputs/videos_in:ro
+    tmpfs:
+      - /tmp:size=2g
+
+volumes:
+  dev-images:
+  dev-db:
+  dev-embed-cache:
+  dev-models:
+  dev-exports:
+  dev-hf-cache:

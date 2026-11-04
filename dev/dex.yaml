@@ -1,0 +1,42 @@
+# Local-only OIDC provider (Dex) for end-to-end testing. DEV ONLY – static users, no real secrets.
+# The issuer host "dex.localhost" resolves to 127.0.0.1 in browsers and, inside the compose
+# network, to the dex container (network alias), so browser and app see the same issuer URL.
+issuer: http://dex.localhost:5556/dex
+
+storage:
+  type: memory
+
+web:
+  http: 0.0.0.0:5556
+
+oauth2:
+  skipApprovalScreen: true
+  responseTypes: ["code"]
+
+staticClients:
+  - id: room-labeling-dev
+    name: Room Labeling (dev)
+    secret: dev-client-secret
+    redirectURIs:
+      - http://localhost:8000/auth/callback
+
+enablePasswordDB: true
+
+# All users: password "password"
+staticPasswords:
+  - email: admin@example.test
+    hash: "$2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W"
+    username: admin
+    userID: "00000000-0000-4000-8000-000000000001"
+  - email: alice@example.test
+    hash: "$2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W"
+    username: alice
+    userID: "00000000-0000-4000-8000-000000000002"
+  - email: bob@example.test
+    hash: "$2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W"
+    username: bob
+    userID: "00000000-0000-4000-8000-000000000003"
+  - email: carol@example.test
+    hash: "$2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W"
+    username: carol
+    userID: "00000000-0000-4000-8000-000000000004"

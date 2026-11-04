@@ -236,6 +236,23 @@ Provenance/SBOM). Alle Workflows: minimale `permissions`, Actions auf Commit-SHA
 `concurrency`. Dependabot für uv, Docker und GitHub-Actions. Dependencies sind in `uv.lock`
 (mit Hashes) gepinnt.
 
+## Lokal end-to-end testen (Docker, inkl. OIDC)
+
+`docker-compose.dev.yml` startet die App mit Hot-Reload **und** einen lokalen OIDC-Provider
+([Dex](https://dexidp.io/)) mit Test-Usern – ohne externe Accounts. **Nur für lokal, nie exponieren.**
+
+```bash
+make dev-up        # Build + Start: App http://localhost:8000, Dex http://dex.localhost:5556
+make dev-demo      # synthetische Demo-Bilder/-Video nach ./images_in, ./videos_in (keine echten Daten)
+make dev-ingest    # Ingest in die Dev-DB
+```
+
+Login mit `alice@example.test` / `password` (ebenso `bob@…`, `carol@…`; `admin@example.test` ist Admin).
+Mit mehreren Usern in getrennten Browser-Fenstern labeln, um `needs_more`, `conflict`, Agreement und
+den Export unter `/admin` zu sehen. `*.localhost` löst moderne Browser automatisch auf 127.0.0.1 auf.
+Embeddings/Training brauchen Torch: `DEV_EXTRAS="--extra probe --extra siglip" make dev-up`, dann
+`make dev-embed dev-train`. `make dev-down` entfernt Container **und** Dev-Volumes.
+
 ## Betrieb (Docker)
 
 ```bash
