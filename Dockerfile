@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---- build: resolve the locked dependency set (hashes verified by uv) ---------------------
-FROM python:3.12-slim-bookworm AS builder
+FROM python:3.15-slim-bookworm AS builder
 COPY --from=ghcr.io/astral-sh/uv:0.11.32 /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never UV_PROJECT_ENVIRONMENT=/opt/venv
 WORKDIR /build
@@ -11,7 +11,7 @@ ARG EXTRAS="--extra probe --extra siglip"
 RUN uv sync --frozen --no-dev ${EXTRAS}
 
 # ---- runtime ------------------------------------------------------------------------------
-FROM python:3.12-slim-bookworm
+FROM python:3.15-slim-bookworm
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ffmpeg tini \
  && rm -rf /var/lib/apt/lists/* \
