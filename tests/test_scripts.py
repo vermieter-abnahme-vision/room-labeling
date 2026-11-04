@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -67,7 +68,29 @@ def test_scan_places365_val_layout_and_import(
 
 
 def test_download_rejects_non_https(tmp_path: Path) -> None:
-    import pytest
 
     with pytest.raises(ValueError, match="https"):
         lib._download("http://example.test/x.tar", tmp_path / "x.tar")
+
+
+def test_scripts_refuse_unmigrated_database(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+
+    from app.config import get_settings
+    from scripts._common import bootstrap
+
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'fresh.db'}")
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(SystemExit, match="make migrate"):
+            bootstrap()
+        from alembic.config import Config
+
+        from alembic import command
+
+        cfg = Config("alembic.ini")
+        command.upgrade(cfg, "head")
+        bootstrap().db.dispose()
+    finally:
+        get_settings.cache_clear()

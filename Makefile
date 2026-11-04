@@ -10,27 +10,27 @@ dev:
 migrate:
 	uv run alembic upgrade head
 
-ingest:
+ingest: migrate
 	uv run python -m scripts.ingest
 
-embed:
+embed: migrate
 	uv run python -m scripts.embed
 
-train:
+train: migrate
 	uv run python -m scripts.train_probe
 
-zeroshot:
+zeroshot: migrate
 	uv run python -m scripts.train_probe --zero-shot
 
 # e.g. make import-library DATASET=places365 ROOT=./library_data ARGS="--download"
-import-library:
+import-library: migrate
 	uv run python -m scripts.import_library --dataset $(DATASET) --root $(ROOT) $(ARGS)
 
-export:
+export: migrate
 	uv run python -m scripts.export $(ARGS)
 
 # e.g. make materialize MANIFEST=var/exports/<stamp>/manifest.jsonl
-materialize:
+materialize: migrate
 	uv run python -m scripts.materialize_imagefolder $(MANIFEST) $(ARGS)
 
 test:
