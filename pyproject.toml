@@ -25,7 +25,7 @@ dependencies = [
 # Probe training (cheap): numpy + scikit-learn
 probe = ["numpy>=2.0", "scikit-learn>=1.5", "joblib>=1.4"]
 # SigLIP embeddings (heavy): torch + transformers
-siglip = ["torch>=2.5", "transformers>=4.46", "safetensors>=0.4", "numpy>=2.0"]
+siglip = ["torch>=2.5", "transformers>=4.46", "safetensors>=0.4", "numpy>=2.0", "sentencepiece>=0.2", "protobuf>=5.0"]
 
 [dependency-groups]
 dev = [
