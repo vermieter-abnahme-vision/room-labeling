@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Konflikte · Room Labeling{% endblock %}
+{% block content %}
+<h1>Konflikt-Queue ({{ items|length }})</h1>
+{% for item in items %}
+<section class="card conflict">
+  <img src="/img/{{ item.sha256 }}" alt="Konflikt-Bild" loading="lazy">
+  <p><small>Gruppe: {{ item.group_id }}</small></p>
+  <p>Stimmen:
+    {% for name, label in item.votes %}<span class="chip">{{ name }}: {{ scheme.display_name(label) }}</span> {% endfor %}
+  </p>
+  <form method="post" action="/admin/conflicts/resolve" class="grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="sha256" value="{{ item.sha256 }}">
+    {% for key in scheme.labels %}
+    <button type="submit" name="label" value="{{ key }}" class="btn">{{ scheme.display_name(key) }}</button>
+    {% endfor %}
+  </form>
+</section>
+{% else %}
+<p class="card">Keine Konflikte. 🎉</p>
+{% endfor %}
+{% endblock %}

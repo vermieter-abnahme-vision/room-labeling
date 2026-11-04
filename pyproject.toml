@@ -1,0 +1,92 @@
+[project]
+name = "room-labeling"
+version = "0.1.0"
+description = "Mobile-first room labeling tool producing a leak-free ML datapack"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "sqlalchemy>=2.0.36",
+    "alembic>=1.14",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "authlib>=1.3.2",
+    "httpx>=0.27",
+    "itsdangerous>=2.2",
+    "jinja2>=3.1.4",
+    "python-multipart>=0.0.12",
+    "slowapi>=0.1.9",
+    "pillow>=11.0",
+]
+
+[project.optional-dependencies]
+# Probe training (cheap): numpy + scikit-learn
+probe = ["numpy>=2.0", "scikit-learn>=1.5", "joblib>=1.4"]
+# SigLIP embeddings (heavy): torch + transformers
+siglip = ["torch>=2.5", "transformers>=4.46", "safetensors>=0.4", "numpy>=2.0"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "pip-audit>=2.7",
+    "pre-commit>=4.0",
+]
+
+[tool.uv]
+package = false
+default-groups = ["dev"]
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "SIM", "C4", "RUF"]
+ignore = ["S101", "RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "fastapi.Form"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "B011", "E501", "RUF012", "SIM117", "RUF059", "E741"]
+"scripts/**" = ["S603", "S607"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+files = ["app", "scripts"]
+
+[[tool.mypy.overrides]]
+module = ["sklearn.*", "joblib.*", "transformers.*", "torch.*", "authlib.*", "slowapi.*"]
+ignore_missing_imports = true
+follow_imports = "skip"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra --strict-markers"
+filterwarnings = ["error::sqlalchemy.exc.SAWarning"]
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["app/services/inference.py"]
+
+[[tool.mypy.overrides]]
+module = ["app.routers.*"]
+# slowapi's rate-limit decorators are untyped
+disallow_untyped_decorators = false

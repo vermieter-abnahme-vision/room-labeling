@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Admin · Room Labeling{% endblock %}
+{% block content %}
+<h1>Fortschritt</h1>
+<section class="card">
+  <table>
+    <tr><th>Gesamt</th><td>{{ progress.total }}</td></tr>
+    <tr><th>Final</th><td>{{ progress.final }}</td></tr>
+    <tr><th>Braucht 3. Label</th><td>{{ progress.needs_more }}</td></tr>
+    <tr><th>Offen</th><td>{{ progress.open }}</td></tr>
+    <tr><th>Konflikt</th><td>{{ progress.conflict }}{% if progress.conflict %} · <a href="/admin/conflicts">prüfen</a>{% endif %}</td></tr>
+  </table>
+  <progress value="{{ progress.final }}" max="{{ progress.total or 1 }}"></progress>
+</section>
+
+<h2>Verteilung (final)</h2>
+<section class="card">
+  <table>
+  {% for label, count in distribution.items() %}
+    <tr><th>{{ scheme.display_name(label) }}</th><td>{{ count }}</td>
+        <td class="bar"><progress value="{{ count }}" max="{{ progress.final or 1 }}"></progress></td></tr>
+  {% endfor %}
+  </table>
+</section>
+
+<h2>Inter-Annotator-Agreement</h2>
+<section class="card">
+  <p>Überlappende Bilder (≥ 2 Labeler): <strong>{{ agreement.overlapping_images }}</strong><br>
+  Krippendorff-α (nominal):
+  <strong>{{ '%.3f' % agreement.krippendorff_alpha if agreement.krippendorff_alpha is not none else '–' }}</strong>
+  <small>(Library-Pseudolabels ausgeschlossen)</small></p>
+  {% if agreement.pairs %}
+  <table>
+    <tr><th>Paar</th><th>Überlapp</th><th>Übereinst.</th><th>Cohen-κ</th></tr>
+    {% for p in agreement.pairs %}
+    <tr><td>{{ p.labeler_a }} ↔ {{ p.labeler_b }}</td><td>{{ p.overlap }}</td>
+      <td>{{ '%.1f%%' % (p.agreement * 100) if p.agreement is not none else '–' }}</td>
+      <td>{{ '%.3f' % p.kappa if p.kappa is not none else '–' }}</td></tr>
+    {% endfor %}
+  </table>
+  {% else %}<p>Noch keine überlappenden Labels.</p>{% endif %}
+</section>
+
+<h2>Labeler</h2>
+<section class="card">
+  <table>
+  {% for l in labelers %}<tr><th>{{ l.display_name }}</th><td>{{ l.labels_given }}</td></tr>{% else %}<tr><td>Noch keine Labels.</td></tr>{% endfor %}
+  </table>
+</section>
+{% endblock %}

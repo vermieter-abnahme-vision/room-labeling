@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Labeln · Room Labeling{% endblock %}
+{% block content %}
+<section id="app" data-scheme="room">
+  <div class="progress">
+    <progress id="progress" value="0" max="1"></progress>
+    <span id="progress-text">–</span>
+  </div>
+
+  <figure class="photo">
+    <img id="photo" alt="Zu labelndes Foto" decoding="async">
+  </figure>
+
+  <button id="confirm" class="btn primary" type="button" hidden></button>
+  <div id="buttons" class="grid" role="group" aria-label="Raumtyp wählen"></div>
+
+  <div class="row">
+    <button id="back" class="btn ghost" type="button" disabled>↶ Zurück</button>
+    <button id="skip" class="btn ghost" type="button">Überspringen ⏭</button>
+  </div>
+
+  <p id="empty" class="card" hidden>Alles erledigt – im Moment gibt es kein weiteres Bild für dich. 🎉</p>
+  <p id="error" class="error" role="alert" hidden></p>
+  <p class="hint">Tasten: 1–6 wählen, Enter bestätigt den Vorschlag, S überspringt.</p>
+</section>
+{% endblock %}
+{% block scripts %}<script src="/static/label.js" defer></script>{% endblock %}

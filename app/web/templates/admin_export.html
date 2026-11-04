@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Export · Room Labeling{% endblock %}
+{% block content %}
+<h1>Datapack-Export</h1>
+<section class="card">
+  <form method="post" action="/admin/export" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>Seed <input type="number" name="seed" value="0" min="0" max="2147483647"></label>
+    <label>Library-Bilder
+      <select name="library_split">
+        <option value="train" selected>immer in train</option>
+        <option value="group">nach group_id splitten</option>
+      </select>
+    </label>
+    <label class="check"><input type="checkbox" name="keep_previous_splits" value="true" checked>
+      Splits des letzten Exports beibehalten (Gruppen wandern nie zwischen Splits)</label>
+    <button type="submit" class="btn primary">Manifest erzeugen</button>
+  </form>
+  <p><small>Schreibt <code>manifest.jsonl</code> + <code>meta.json</code> auf den Server (EXPORT_DIR). Bilder werden nie über das Web exportiert.</small></p>
+</section>
+<h2>Bisherige Exporte</h2>
+<section class="card">
+  <ul>
+  {% for name in exports %}
+    <li>{{ name }} – <a href="/admin/export/{{ name }}/manifest.jsonl">manifest.jsonl</a> · <a href="/admin/export/{{ name }}/meta.json">meta.json</a></li>
+  {% else %}<li>Noch keine Exporte.</li>{% endfor %}
+  </ul>
+</section>
+{% endblock %}

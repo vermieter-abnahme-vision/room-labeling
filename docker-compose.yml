@@ -1,0 +1,80 @@
+# Room-labeling stack. Images, DB and embeddings live ONLY in these volumes / on this host.
+# They are never part of the git repository.
+#
+#   cp .env.example .env   # fill in SECRET_KEY + OIDC_*
+#   docker compose up -d --build
+#   docker compose run --rm app python -m scripts.ingest      # ./images_in + ./videos_in
+#   docker compose run --rm app python -m scripts.embed
+#   docker compose run --rm app python -m scripts.train_probe
+#
+# The app listens on 127.0.0.1:8000 only. Put a TLS-terminating reverse proxy
+# (Caddy / nginx / Traefik) in front of it; OIDC and Secure cookies require HTTPS.
+
+services:
+  app:
+    build: .
+    image: room-labeling:local
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Container paths (override the host-style paths from .env.example)
+      DATABASE_URL: sqlite:////data/db/labeling.db
+      IMAGES_DIR: /data/images
+      EMBED_CACHE_DIR: /data/embed_cache
+      MODELS_DIR: /data/models
+      EXPORT_DIR: /data/exports
+      IMAGES_IN_DIR: /inputs/images_in
+      VIDEOS_IN_DIR: /inputs/videos_in
+      HF_HOME: /data/hf
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - images:/data/images
+      - db:/data/db
+      - embed-cache:/data/embed_cache
+      - models:/data/models
+      - exports:/data/exports
+      - hf-cache:/data/hf
+      - ./images_in:/inputs/images_in:ro
+      - ./videos_in:/inputs/videos_in:ro
+    # Trust X-Forwarded-* from the reverse proxy only. Set to the proxy's address/network.
+    command: >
+      uvicorn app.main:run_factory --factory --host 0.0.0.0 --port 8000
+      --proxy-headers --forwarded-allow-ips=${FORWARDED_ALLOW_IPS:-127.0.0.1}
+    read_only: true
+    tmpfs:
+      - /tmp:size=4g          # ffmpeg frame extraction scratch space
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
+  # --- Optional: Authentik as OIDC provider -------------------------------------------------
+  # Use the official compose file from https://docs.goauthentik.io/install-config/install/docker-compose
+  # (postgresql + server + worker) and add this app as an "OAuth2/OpenID Provider":
+  #   Redirect URI (strict):  https://labels.example.com/auth/callback
+  #   Signing key: any RSA/EC key, scopes: openid email profile
+  # then set OIDC_ISSUER=https://auth.example.com/application/o/<slug>/ in .env.
+  #
+  # authentik-server:
+  #   image: ghcr.io/goauthentik/server:<pinned-version>
+  #   command: server
+  #   env_file: authentik.env      # AUTHENTIK_SECRET_KEY, AUTHENTIK_POSTGRESQL__* (never commit)
+  #   depends_on: [authentik-db]
+  # authentik-worker:
+  #   image: ghcr.io/goauthentik/server:<pinned-version>
+  #   command: worker
+  #   env_file: authentik.env
+  #   depends_on: [authentik-db]
+  # authentik-db:
+  #   image: docker.io/library/postgres:16-alpine
+  #   env_file: authentik.env
+  #   volumes: [authentik-db:/var/lib/postgresql/data]
+
+volumes:
+  images:
+  db:
+  embed-cache:
+  models:
+  exports:
+  hf-cache:
+  # authentik-db:

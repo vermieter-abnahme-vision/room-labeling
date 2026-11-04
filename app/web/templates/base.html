@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}Room Labeling{% endblock %}</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/label">Room&nbsp;Labeling</a>
+    {% if user %}
+    <nav>
+      <a href="/label" {% if page == 'label' %}aria-current="page"{% endif %}>Labeln</a>
+      {% if user.is_admin %}
+      <a href="/admin" {% if page == 'admin' %}aria-current="page"{% endif %}>Admin</a>
+      <a href="/admin/conflicts" {% if page == 'conflicts' %}aria-current="page"{% endif %}>Konflikte</a>
+      <a href="/admin/export" {% if page == 'export' %}aria-current="page"{% endif %}>Export</a>
+      {% endif %}
+      <form method="post" action="/auth/logout" class="inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="link">Abmelden</button>
+      </form>
+    </nav>
+    {% endif %}
+  </header>
+  <main>
+  {% block content %}{% endblock %}
+  </main>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
